@@ -64,6 +64,9 @@ func TestUserRemovedHandsJobsAndRunnersOver(t *testing.T) {
 		}
 		i++
 	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
 	var created int64
 	_ = db.QueryRowContext(ctx, `SELECT created_by_id FROM runners_machines WHERE id = 1`).Scan(&created)
 	if created != 3 {

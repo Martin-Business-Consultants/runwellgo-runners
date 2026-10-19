@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -156,7 +157,7 @@ func call(t *testing.T, h *plugin.Host, who any, method, export string, params m
 	return res.Status, out
 }
 
-func id(v any) string { return fmt.Sprint(intOf(v)) }
+func id(v any) string { return strconv.FormatInt(intOf(v), 10) }
 
 // addRunner adds a runner and answers the machine its token stands for.
 func addRunner(t *testing.T, h *plugin.Host, name string, repos ...string) (*plugin.Machine, string) {
@@ -193,7 +194,7 @@ func TestTokensAreThePluginsOwnAndRevocable(t *testing.T) {
 	for _, r := range list["runners"].([]any) {
 		runnerID = intOf(r.(map[string]any)["id"])
 	}
-	if status, _ := call(t, h, marcus, "DELETE", "deleteRunner", map[string]string{"id": fmt.Sprint(runnerID)}, nil, nil); status != 200 {
+	if status, _ := call(t, h, marcus, "DELETE", "deleteRunner", map[string]string{"id": strconv.FormatInt(runnerID, 10)}, nil, nil); status != 200 {
 		t.Fatalf("deleteRunner: %d", status)
 	}
 	if got, _ := h.MachineFor(t.Context(), Key, token); got != nil {

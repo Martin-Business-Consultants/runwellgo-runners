@@ -299,9 +299,7 @@ func strList(v any) []string {
 			}
 		}
 	case string:
-		for _, s := range strings.FieldsFunc(l, func(r rune) bool { return r == ',' || r == '\n' || r == ' ' }) {
-			out = append(out, s)
-		}
+		out = append(out, strings.FieldsFunc(l, func(r rune) bool { return r == ',' || r == '\n' || r == ' ' })...)
 	}
 	return out
 }
@@ -321,21 +319,6 @@ func nullable(s string) any {
 		return nil
 	}
 	return s
-}
-
-func placeholders(n int) string {
-	if n <= 0 {
-		return "NULL"
-	}
-	return strings.TrimSuffix(strings.Repeat("?,", n), ",")
-}
-
-func anys[T any](list []T) []any {
-	out := make([]any, len(list))
-	for i, v := range list {
-		out[i] = v
-	}
-	return out
 }
 
 // emit raises one of the plugin's own events for other plugins (the AI

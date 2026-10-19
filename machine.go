@@ -89,15 +89,17 @@ func heartbeat(ctx context.Context, api *plugin.API, req *plugin.Request) (*plug
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 	for rows.Next() {
 		var id int64
 		if err := rows.Scan(&id); err != nil {
-			rows.Close()
 			return nil, err
 		}
 		cancel = append(cancel, id)
 	}
-	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	cleanup := []map[string]any{}
 	jobs, err := queryJobs(ctx, api, `claimed_by_id = ? AND cleanup = 'pending' ORDER BY id`, m.ID)
 	if err != nil {
@@ -192,7 +194,7 @@ func postEvents(ctx context.Context, api *plugin.API, req *plugin.Request) (*plu
 		Events []Event `json:"events"`
 	}
 	if err := json.Unmarshal(req.Body, &body); err != nil {
-		return refuse(http.StatusBadRequest, "Send {\"events\": [{\"stream\", \"text\", \"at\"}]}."), nil
+		return refuse(http.StatusBadRequest, "Send {\"events\": [{\"stream\", \"text\", \"at\"}]}."), nil //nolint:nilerr // the caller's mistake, answered
 	}
 	lines := []Event{}
 	for _, e := range body.Events {
@@ -276,7 +278,7 @@ func finish(ctx context.Context, api *plugin.API, req *plugin.Request) (*plugin.
 	prURL := strings.TrimSpace(str(p["pr_url"]))
 	if prURL != "" {
 		if u, err := url.Parse(prURL); err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
-			return invalid("pr_url", "must be an http(s) address"), nil
+			return invalid("pr_url", "must be an http(s) address"), nil //nolint:nilerr // the caller's mistake, answered
 		}
 	}
 	branch := strings.TrimSpace(str(p["branch"]))

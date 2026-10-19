@@ -7,6 +7,7 @@ import (
 	"html"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -89,7 +90,7 @@ func listJobs(ctx context.Context, api *plugin.API, req *plugin.Request) (*plugi
 	// What the filters offer: the runners and the people who asked.
 	runners := []map[string]any{{"value": "all", "label": "Any runner"}}
 	for _, m := range sortedNames(names) {
-		runners = append(runners, map[string]any{"value": fmt.Sprint(m.id), "label": m.name})
+		runners = append(runners, map[string]any{"value": strconv.FormatInt(m.id, 10), "label": m.name})
 	}
 	// Each person by the name on their newest job (a removed person's jobs
 	// are their successor's, under the name of whoever asked).
@@ -106,7 +107,10 @@ func listJobs(ctx context.Context, api *plugin.API, req *plugin.Request) (*plugi
 		if err := rows.Scan(&id, &name); err != nil {
 			return nil, err
 		}
-		people = append(people, map[string]any{"value": fmt.Sprint(id), "label": orString(name, fmt.Sprintf("Person %d", id))})
+		people = append(people, map[string]any{"value": strconv.FormatInt(id, 10), "label": orString(name, fmt.Sprintf("Person %d", id))})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	counts := map[string]int{}
 	crows, err := api.Query(ctx, `SELECT status, count(*) FROM runners_jobs GROUP BY status`)
@@ -121,6 +125,9 @@ func listJobs(ctx context.Context, api *plugin.API, req *plugin.Request) (*plugi
 			return nil, err
 		}
 		counts[s] = n
+	}
+	if err := crows.Err(); err != nil {
+		return nil, err
 	}
 	var anyRunner int
 	_ = api.QueryRow(ctx, `SELECT count(*) FROM runners_machines`).Scan(&anyRunner)
@@ -200,7 +207,7 @@ func newJob(ctx context.Context, api *plugin.API, req *plugin.Request, c *plugin
 	errs := map[string][]string{}
 	typ, id, err := plugin.ParseRecord(in.Record)
 	if err != nil || typ != "Todo" {
-		return nil, invalid("record", `must be a piece of work, like "Todo:18"`), nil
+		return nil, invalid("record", `must be a piece of work, like "Todo:18"`), nil //nolint:nilerr // the caller's mistake, answered
 	}
 	work, err := api.Record(ctx, in.Record)
 	if errors.Is(err, plugin.ErrNoRecord) {
@@ -234,11 +241,12 @@ func newJob(ctx context.Context, api *plugin.API, req *plugin.Request, c *plugin
 	}
 	if in.RunnerID != 0 {
 		m, err := findRunner(ctx, api, in.RunnerID)
-		if errors.Is(err, errNotFound) {
+		switch {
+		case errors.Is(err, errNotFound):
 			errs["runner_id"] = []string{"isn't one of the runners"}
-		} else if err != nil {
+		case err != nil:
 			return nil, nil, err
-		} else if len(errs["repo"]) == 0 && len(m.AllowedRepos) > 0 && !matchesAny(m.AllowedRepos, in.Repo) {
+		case len(errs["repo"]) == 0 && len(m.AllowedRepos) > 0 && !matchesAny(m.AllowedRepos, in.Repo):
 			errs["runner_id"] = []string{"doesn't allow " + in.Repo + ": add it to the runner's repositories, or choose another"}
 		}
 	}
@@ -603,14 +611,15 @@ func handoffForm(ctx context.Context, api *plugin.API, req *plugin.Request) (*pl
 		} else if m.Paused {
 			label += " (paused)"
 		}
-		runnerOptions = append(runnerOptions, map[string]any{"value": fmt.Sprint(m.ID), "label": label})
+		runnerOptions = append(runnerOptions, map[string]any{"value": strconv.FormatInt(m.ID, 10), "label": label})
 	}
 	text := "A runner checks out the repository, works on it with your coding agent and comes back with a pull request for you to approve."
-	if work == nil {
+	switch {
+	case work == nil:
 		text = "Open a piece of work to hand it to a runner."
-	} else if len(runners) == 0 {
+	case len(runners) == 0:
 		text = "There's no runner yet: add one in Settings › Runners, then hand this over."
-	} else if len(repos) == 0 {
+	case len(repos) == 0:
 		text = "No repositories yet: set a default for this engagement or client in Settings › Runners."
 	}
 	return ok(map[string]any{"text": text, "handoff": values, "repos": repoOptions, "runners": runnerOptions})

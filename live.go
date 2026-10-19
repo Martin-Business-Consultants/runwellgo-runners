@@ -3,6 +3,7 @@ package runners
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -158,7 +159,7 @@ func approvalPayload(j *Job, runnerName string) map[string]any {
 		title += ": " + j.RecordTitle
 	}
 	return map[string]any{
-		"id": fmt.Sprint(j.ID), "kind": "runner_job", "title": title,
+		"id": strconv.FormatInt(j.ID, 10), "kind": "runner_job", "title": title,
 		"summary": fmt.Sprintf("A runner changed %d files in %s for %s.", len(j.FilesChanged), j.Repo, orString(j.RecordTitle, j.Record)),
 		"record":  j.Record, "link": j.PRURL, "details_markdown": d.String(), "requested_by": j.RequestedByID,
 		"approvers": map[string]any{"user_ids": []int64{j.RequestedByID}},
@@ -170,7 +171,7 @@ func approvalPayload(j *Job, runnerName string) map[string]any {
 // withdrawApproval takes an approval back (the job was cancelled or tried
 // again before anyone decided).
 func withdrawApproval(ctx context.Context, api *plugin.API, j *Job) {
-	emit(ctx, api, "runners.approval.withdrawn", map[string]any{"id": fmt.Sprint(j.ID)})
+	emit(ctx, api, "runners.approval.withdrawn", map[string]any{"id": strconv.FormatInt(j.ID, 10)})
 }
 
 func orString(s, otherwise string) string {

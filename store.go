@@ -178,7 +178,7 @@ func validRepo(s string) bool {
 	}
 	for _, p := range parts {
 		if p == "" || p == "." || p == ".." || strings.IndexFunc(p, func(r rune) bool {
-			return !(r == '-' || r == '_' || r == '.' || r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9')
+			return r != '-' && r != '_' && r != '.' && (r < 'a' || r > 'z') && (r < 'A' || r > 'Z') && (r < '0' || r > '9')
 		}) >= 0 {
 			return false
 		}
