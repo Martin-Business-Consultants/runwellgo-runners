@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Martin-Business-Consultants/runwellgo/internal/plugin"
+	"github.com/Martin-Business-Consultants/runwellgo/v3/plugin"
 )
 
 // What reaches people as jobs move: a job's state and new log lines pushed

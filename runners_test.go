@@ -7,16 +7,14 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/Martin-Business-Consultants/runwellgo/internal/mail"
-	"github.com/Martin-Business-Consultants/runwellgo/internal/plugin"
-	"github.com/Martin-Business-Consultants/runwellgo/internal/store"
+	"github.com/Martin-Business-Consultants/runwellgo/v3/plugin"
+	"github.com/Martin-Business-Consultants/runwellgo/v3/plugintest"
 )
 
 // env is Runwell as the plugin sees it: one piece of work (Todo:18 on
@@ -33,7 +31,7 @@ func (e *env) ReplaceSetting(context.Context, string, map[string]any) error { re
 func (e *env) Site(context.Context) (plugin.Site, error) {
 	return plugin.Site{Name: "Runwell", URL: "https://runwell.test"}, nil
 }
-func (e *env) SendMail(context.Context, mail.Message) error { return nil }
+func (e *env) SendMail(context.Context, plugin.MailMessage) error { return nil }
 func (e *env) Records(_ context.Context, q plugin.Query) ([]map[string]any, error) {
 	switch q.Type {
 	case "Todo":
@@ -101,25 +99,10 @@ var (
 
 func setup(t *testing.T) (*plugin.Host, *env) {
 	t.Helper()
-	db, err := store.Open(filepath.Join(t.TempDir(), "test.sqlite3"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { db.Close() })
+	db := plugintest.DB(t)
 	e := &env{}
-	spawn := func(ctx context.Context, _ string, fn func(context.Context)) bool { fn(ctx); return true }
-	h := plugin.New(e, db, slog.New(slog.NewTextHandler(io.Discard, nil)), spawn, Module())
-	if err := h.LoadAll(t.Context()); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := h.Install(t.Context(), nil, Key); err != nil {
-		t.Fatal(err)
-	}
-	grants := Module().Manifest.Permissions
-	on := true
-	if _, err := h.Configure(t.Context(), nil, Key, &grants, &on); err != nil {
-		t.Fatal(err)
-	}
+	h := plugintest.Host(t, e, db, Module())
+	plugintest.Enable(t, h, Module())
 	return h, e
 }
 

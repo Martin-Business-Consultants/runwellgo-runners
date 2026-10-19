@@ -2,35 +2,18 @@ package runners
 
 import (
 	"context"
-	"io"
-	"log/slog"
-	"path/filepath"
 	"testing"
 
-	"github.com/Martin-Business-Consultants/runwellgo/internal/plugin"
-	"github.com/Martin-Business-Consultants/runwellgo/internal/store"
+	"github.com/Martin-Business-Consultants/runwellgo/v3/plugin"
+	"github.com/Martin-Business-Consultants/runwellgo/v3/plugintest"
 )
 
 // A removed person's jobs and runners are their successor's; who asked and
 // who decided stay as names.
 func TestUserRemovedHandsJobsAndRunnersOver(t *testing.T) {
-	db, err := store.Open(filepath.Join(t.TempDir(), "test.sqlite3"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { db.Close() })
-	spawn := func(ctx context.Context, _ string, fn func(context.Context)) bool { fn(ctx); return true }
-	h := plugin.New(&env{}, db, slog.New(slog.NewTextHandler(io.Discard, nil)), spawn, Module())
-	if err := h.LoadAll(t.Context()); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := h.Install(t.Context(), nil, Key); err != nil {
-		t.Fatal(err)
-	}
-	grants, on := Module().Manifest.Permissions, true
-	if _, err := h.Configure(t.Context(), nil, Key, &grants, &on); err != nil {
-		t.Fatal(err)
-	}
+	db := plugintest.DB(t)
+	h := plugintest.Host(t, &env{}, db, Module())
+	plugintest.Enable(t, h, Module())
 	ctx := context.Background()
 	for _, q := range []string{
 		`INSERT INTO runners_machines (id, name, token_id, created_by_id, created_at, updated_at) VALUES (1, 'Box', 1, 2, 'now', 'now'), (2, 'Other', 2, 1, 'now', 'now')`,

@@ -1,4 +1,4 @@
-// Runners (plugins/runners): hand code to a machine you control. The jobs
+// Runners (runwellgo-runners): hand code to a machine you control. The jobs
 // at /runners and each job's live log, Settings › Runners, and a Code tab on
 // each piece of work. Shown only while the plugin is on.
 import { addTab } from "$lib/record-tabs.js";
